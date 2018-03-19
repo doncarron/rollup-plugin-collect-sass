@@ -249,7 +249,7 @@ export default(options = {}) => {
                     return extractFn(cssExtract, opts)
 
                 return new Promise((resolveExtract, rejectExtract) => {
-                    const destPath = extractPath || path.join(path.dirname(opts.dest), `${path.basename(opts.dest, path.extname(opts.dest))}.css`)
+                    const destPath = extractPath || path.join(path.dirname(opts.dest), `${path.basename(opts.dest, path.extname(opts.dest))}${sassOnly ? '.scss' : '.css'}`)
 
                     fs.writeFile(destPath, cssExtract, err => {
                         if (err) {
