@@ -1,10 +1,9 @@
-
 import fs from 'fs'
 import path from 'path'
 import resolve from 'resolve'
 import styleInject from 'style-inject'
 import sass from 'node-sass'
-import { createFilter } from 'rollup-pluginutils'
+import {createFilter} from 'rollup-pluginutils'
 
 const START_COMMENT_FLAG = '/* collect-postcss-start'
 const END_COMMENT_FLAG = 'collect-postcss-end */'
@@ -23,82 +22,78 @@ const injectStyleFuncCode = styleInject
     .toString()
     .replace(/styleInject/, injectFnName)
 
-export default (options = {}) => {
+export default(options = {}) => {
     const extensions = options.extensions || importExtensions
-    const filter = createFilter(options.include || ['**/*.scss', '**/*.sass'], options.exclude)
+    const filter = createFilter(options.include || [
+        '**/*.scss', '**/*.sass'
+    ], options.exclude)
     const extract = Boolean(options.extract)
-    const extractFn = typeof options.extract === 'function' ? options.extract : null
-    const extractPath = typeof options.extract === 'string' ? options.extract : null
+    const extractFn = typeof options.extract === 'function'
+        ? options.extract
+        : null
+    const extractPath = typeof options.extract === 'string'
+        ? options.extract
+        : null
     const importOnce = Boolean(options.importOnce)
+    const sassOnly = Boolean(options.sassOnly)
 
     let cssExtract = ''
     let visitedImports = new Set()
 
     return {
         name: 'collect-sass',
-        intro () {
+        intro() {
             if (extract) {
                 return null
             }
 
             return injectStyleFuncCode
         },
-        transform (code, id) {
-            if (!filter(id)) { return null }
-            if (extensions.indexOf(path.extname(id)) === -1) { return null }
+        transform(code, id) {
+            if (!filter(id)) {
+                return null
+            }
+            if (extensions.indexOf(path.extname(id)) === -1) {
+                return null
+            }
 
             const relBase = path.dirname(id)
             const fileImports = new Set([id])
             visitedImports.add(id)
 
-            // Resolve imports before lossing relative file info
-            // Find all import statements to replace
+            // Resolve imports before lossing relative file info Find all import statements
+            // to replace
             let transformed = code.replace(importRegex, (match, p1) => {
-                const paths = p1.split(/[,]/).map(p => {
-                    const orgName = p.trim()  // strip whitespace
-                    let name = orgName
+                const paths = p1
+                    .split(/[,]/)
+                    .map(p => {
+                        const orgName = p.trim() // strip whitespace
+                        let name = orgName
 
-                    if (name[0] === name[name.length - 1] && (name[0] === '"' || name[0] === "'")) {
-                        name = name.substring(1, name.length - 1)  // string quotes
-                    }
-
-                    // Exclude CSS @import: http://sass-lang.com/documentation/file.SASS_REFERENCE.html#import
-                    if (path.extname(name) === '.css') { return orgName }
-                    if (name.startsWith('http://')) { return orgName }
-                    if (name.startsWith('url(')) { return orgName }
-
-                    const fileName = path.basename(name)
-                    const dirName = path.dirname(name)
-
-                    // libsass's file name resolution: https://github.com/sass/node-sass/blob/1b9970a/src/libsass/src/file.cpp#L300
-                    if (fs.existsSync(path.join(relBase, dirName, fileName))) {
-                        const absPath = path.join(relBase, name)
-
-                        if (importOnce && visitedImports.has(absPath)) {
-                            return null
+                        if (name[0] === name[name.length - 1] && (name[0] === '"' || name[0] === "'")) {
+                            name = name.substring(1, name.length - 1) // string quotes
                         }
 
-                        visitedImports.add(absPath)
-                        fileImports.add(absPath)
-                        return `'${absPath}'`
-                    }
-
-                    if (fs.existsSync(path.join(relBase, dirName, `_${fileName}`))) {
-                        const absPath = path.join(relBase, `_${name}`)
-
-                        if (importOnce && visitedImports.has(absPath)) {
-                            return null
+                        // Exclude CSS @import:
+                        // http://sass-lang.com/documentation/file.SASS_REFERENCE.html#import
+                        if (path.extname(name) === '.css') {
+                            return orgName
+                        }
+                        if (name.startsWith('http://')) {
+                            return orgName
+                        }
+                        if (name.startsWith('url(')) {
+                            return orgName
                         }
 
-                        visitedImports.add(absPath)
-                        fileImports.add(absPath)
-                        return `'${absPath}'`
-                    }
+                        const fileName = path.basename(name)
+                        const dirName = path.dirname(name)
 
-                    for (let i = 0; i < importExtensions.length; i += 1) {
-                        const absPath = path.join(relBase, dirName, `_${fileName}${importExtensions[i]}`)
+                        // libsass's file name resolution:
+                        // https://github.com/sass/node-sass/blob/1b9970a/src/libsass/src/file.cpp#L300
+                        if (fs.existsSync(path.join(relBase, dirName, fileName))) {
+                            const absPath = path.join(relBase, name)
 
-                        if (fs.existsSync(absPath)) {
                             if (importOnce && visitedImports.has(absPath)) {
                                 return null
                             }
@@ -107,12 +102,10 @@ export default (options = {}) => {
                             fileImports.add(absPath)
                             return `'${absPath}'`
                         }
-                    }
 
-                    for (let i = 0; i < importExtensions.length; i += 1) {
-                        const absPath = path.join(relBase, `${name}${importExtensions[i]}`)
+                        if (fs.existsSync(path.join(relBase, dirName, `_${fileName}`))) {
+                            const absPath = path.join(relBase, `_${name}`)
 
-                        if (fs.existsSync(absPath)) {
                             if (importOnce && visitedImports.has(absPath)) {
                                 return null
                             }
@@ -121,32 +114,59 @@ export default (options = {}) => {
                             fileImports.add(absPath)
                             return `'${absPath}'`
                         }
-                    }
 
-                    let nodeResolve
+                        for (let i = 0; i < importExtensions.length; i += 1) {
+                            const absPath = path.join(relBase, dirName, `_${fileName}${importExtensions[i]}`)
 
-                    try {
-                        nodeResolve = resolve.sync(path.join(dirName, `_${fileName}`), { extensions })
-                    } catch (e) {} // eslint-disable-line no-empty
+                            if (fs.existsSync(absPath)) {
+                                if (importOnce && visitedImports.has(absPath)) {
+                                    return null
+                                }
 
-                    try {
-                        nodeResolve = resolve.sync(path.join(dirName, fileName), { extensions })
-                    } catch (e) {} // eslint-disable-line no-empty
-
-                    if (nodeResolve) {
-                        if (importOnce && visitedImports.has(nodeResolve)) {
-                            return null
+                                visitedImports.add(absPath)
+                                fileImports.add(absPath)
+                                return `'${absPath}'`
+                            }
                         }
 
-                        visitedImports.add(nodeResolve)
-                        fileImports.add(nodeResolve)
-                        return `'${nodeResolve}'`
-                    }
+                        for (let i = 0; i < importExtensions.length; i += 1) {
+                            const absPath = path.join(relBase, `${name}${importExtensions[i]}`)
 
-                    this.warn(`Unresolved path in ${id}: ${name}`)
+                            if (fs.existsSync(absPath)) {
+                                if (importOnce && visitedImports.has(absPath)) {
+                                    return null
+                                }
 
-                    return orgName
-                })
+                                visitedImports.add(absPath)
+                                fileImports.add(absPath)
+                                return `'${absPath}'`
+                            }
+                        }
+
+                        let nodeResolve
+
+                        try {
+                            nodeResolve = resolve.sync(path.join(dirName, `_${fileName}`), {extensions})
+                        } catch (e) {} // eslint-disable-line no-empty
+
+                        try {
+                            nodeResolve = resolve.sync(path.join(dirName, fileName), {extensions})
+                        } catch (e) {} // eslint-disable-line no-empty
+
+                        if (nodeResolve) {
+                            if (importOnce && visitedImports.has(nodeResolve)) {
+                                return null
+                            }
+
+                            visitedImports.add(nodeResolve)
+                            fileImports.add(nodeResolve)
+                            return `'${nodeResolve}'`
+                        }
+
+                        this.warn(`Unresolved path in ${id}: ${name}`)
+
+                        return orgName
+                    })
 
                 const uniquePaths = paths.filter(p => p !== null)
 
@@ -163,11 +183,13 @@ export default (options = {}) => {
             // Add sass imports to bundle as JS comment blocks
             return {
                 code: START_COMMENT_FLAG + transformed + END_COMMENT_FLAG,
-                map: { mappings: '' },
-                dependencies: Array.from(fileImports),
+                map: {
+                    mappings: ''
+                },
+                dependencies: Array.from(fileImports)
             }
         },
-        transformBundle (source) {
+        transformBundle(source) {
             // Reset paths
             visitedImports = new Set()
 
@@ -183,48 +205,62 @@ export default (options = {}) => {
             if (accum) {
                 // Add */ end comments back
                 accum = accum.replace(ESCAPED_END_COMMENT_REGEX, '*/')
-                // Transform sass
-                const css = sass.renderSync({
-                    data: accum,
-                    includePaths: ['node_modules'],
-                }).css.toString()
 
-                if (!extract) {
-                    const injected = `${injectFnName}(${JSON.stringify(css)});`
+                if (!sassOnly) {
+                    // Transform sass
+                    const css = sass
+                        .renderSync({data: accum, includePaths: ['node_modules']})
+                        .css
+                        .toString()
 
-                    // Replace first instance with output. Remove all other instances
-                    return {
-                        code: source.replace(replaceRegex, injected).replace(findRegex, ''),
-                        map: { mappings: '' },
+                    if (!extract) {
+                        const injected = `${injectFnName}(${JSON.stringify(css)});`
+
+                        // Replace first instance with output. Remove all other instances
+                        return {
+                            code: source
+                                .replace(replaceRegex, injected)
+                                .replace(findRegex, ''),
+                            map: {
+                                mappings: ''
+                            }
+                        }
                     }
-                }
 
-                // Store css for writing
-                cssExtract = css
+                    // Store css for writing
+                    cssExtract = css
+                }
+                else {
+                    cssExtract = accum
+                }
             }
 
             // Remove all other instances
             return {
                 code: source.replace(findRegex, ''),
-                map: { mappings: '' },
+                map: {
+                    mappings: ''
+                }
             }
         },
-        onwrite (opts) {
+        onwrite(opts) {
             if (extract && cssExtract) {
-                if (extractFn) return extractFn(cssExtract, opts)
+                if (extractFn) 
+                    return extractFn(cssExtract, opts)
 
                 return new Promise((resolveExtract, rejectExtract) => {
-                    const destPath = extractPath ||
-                        path.join(path.dirname(opts.dest), `${path.basename(opts.dest, path.extname(opts.dest))}.css`)
+                    const destPath = extractPath || path.join(path.dirname(opts.dest), `${path.basename(opts.dest, path.extname(opts.dest))}.css`)
 
                     fs.writeFile(destPath, cssExtract, err => {
-                        if (err) { rejectExtract(err) }
+                        if (err) {
+                            rejectExtract(err)
+                        }
                         resolveExtract()
                     })
                 })
             }
 
             return null
-        },
+        }
     }
 }
