@@ -22,7 +22,7 @@ const injectStyleFuncCode = styleInject
     .toString()
     .replace(/styleInject/, injectFnName)
 
-export default(options = {}) => {
+export default (options = {}) => {
     const extensions = options.extensions || importExtensions
     const filter = createFilter(options.include || [
         '**/*.scss', '**/*.sass'
