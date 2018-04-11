@@ -176,6 +176,14 @@ let index = function (options) {
                 dependencies: Array.from(fileImports),
             }
         },
+
+        transformBundle: function transformBundle (source) {
+            // Remove all other instances
+            return {
+                code: source.replace(findRegex, ''),
+                map: { mappings: '' },
+            }
+        },
         
         onwrite: function onwrite (opts) {
 

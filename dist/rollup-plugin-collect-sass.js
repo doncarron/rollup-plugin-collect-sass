@@ -8,7 +8,12 @@ var resolve = _interopDefault$1(require('resolve'));
 var styleInject = _interopDefault$1(require('style-inject'));
 var rollupPluginutils = require('rollup-pluginutils');
 
+var START_COMMENT_FLAG = '/* collect-postcss-start';
+var END_COMMENT_FLAG = 'collect-postcss-end */';
 var ESCAPED_END_COMMENT_FLAG = 'collect-postcss-escaped-end * /';
+var escapeRegex = function (str) { return str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'); };
+
+var findRegex = new RegExp(((escapeRegex(START_COMMENT_FLAG)) + "([^]*?)" + (escapeRegex(END_COMMENT_FLAG))), 'g');
 var importRegex = new RegExp('@import([^;]*);', 'g');
 
 var importExtensions = ['.scss', '.sass'];
@@ -165,6 +170,14 @@ var index = function (options) {
                 code: code,
                 map: { mappings: '' },
                 dependencies: Array.from(fileImports),
+            }
+        },
+
+        transformBundle: function transformBundle (source) {
+            // Remove all other instances
+            return {
+                code: source.replace(findRegex, ''),
+                map: { mappings: '' },
             }
         },
         
