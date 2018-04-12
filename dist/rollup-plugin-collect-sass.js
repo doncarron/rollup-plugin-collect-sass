@@ -197,9 +197,6 @@ var index = function (options) {
                     finalSass += sass + "\n\n";
                 }
 
-                sassExtract = {};
-                classNameMap = {};
-
                 var destPath = extractPath || path.join(path.dirname(opts.dest), ((path.basename(opts.dest, path.extname(opts.dest))) + ".scss"));
 
                 fs.writeFile(destPath, finalSass, function (err) {
